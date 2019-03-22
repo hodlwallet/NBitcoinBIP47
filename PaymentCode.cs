@@ -252,9 +252,9 @@ namespace NBitcoin.BIP47
 
         private BitcoinAddress AddressAt(int idx, Network network)
         {
-            PubKey PubKey = new PubKey(_Pubkey);
+            ExtPubKey PubKey = new ExtPubKey(new PubKey(_Pubkey), _Chain);
 
-            return PubKey.Hash.GetAddress(network);
+            return PubKey.Derive(0).PubKey.GetAddress(network);
         }
 
         private byte SetBit(byte b, int pos)
