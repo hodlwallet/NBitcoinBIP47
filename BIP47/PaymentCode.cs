@@ -42,14 +42,6 @@ namespace NBitcoin.BIP47
 
         public byte Version { get; private set; } = 0x01;
 
-        public PaymentCode()
-        {
-            ChainCode = null;
-            PubKey = null;
-            PaymentCodeString = null;
-            SamouraiPaymentCodeString = null;
-        }
-
         public PaymentCode(byte[] pubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1)
         {
             if (pubKey.Length != (PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN))
