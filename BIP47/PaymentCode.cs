@@ -28,22 +28,22 @@ namespace NBitcoin.BIP47
 
         const int SAMOURAI_SEGWIT_BIT = 0;
 
-        string _PaymentCodeString = null;
+        public string PaymentCodeString { get; } = null;
 
-        string _SamouraiPaymentCodeString = null;
+        public string SamouraiPaymentCodeString { get; } = null;
 
-        byte[] _PubKey = null;
+        public byte[] PubKey { get; } = null;
 
-        byte[] _ChainCode = null;
+        public byte[] ChainCode { get; } = null;
 
-        byte[] _Payload = null;
+        public byte[] Payload { get; private set; } = null;
 
         public PaymentCode()
         {
-            _ChainCode = null;
-            _PubKey = null;
-            _PaymentCodeString = null;
-            _SamouraiPaymentCodeString = null;
+            ChainCode = null;
+            PubKey = null;
+            PaymentCodeString = null;
+            SamouraiPaymentCodeString = null;
         }
 
         public PaymentCode(byte[] pubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1)
@@ -54,11 +54,11 @@ namespace NBitcoin.BIP47
             if (chainCode.Length != CHAIN_CODE_LEN)
                 throw new ArgumentException($"Invalid chain {new HexEncoder().EncodeData(chainCode)}");
 
-            _PubKey = pubKey;
-            _ChainCode = chainCode;
-           
-            _PaymentCodeString = EncodePaymentCode(version);
-            _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
+            PubKey = pubKey;
+            ChainCode = chainCode;
+
+            PaymentCodeString = EncodePaymentCode(version);
+            SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
         public PaymentCode(PubKey pubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(pubKey.ToBytes(), chainCode, version) { }
@@ -69,23 +69,23 @@ namespace NBitcoin.BIP47
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
 
-            _PubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
-            _ChainCode = new byte[CHAIN_CODE_LEN];
+            PubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
+            ChainCode = new byte[CHAIN_CODE_LEN];
 
-            Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, _PubKey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
-            Array.Copy(payload, CHAIN_OFFSET, _ChainCode, 0, CHAIN_CODE_LEN);
+            Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, PubKey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
+            Array.Copy(payload, CHAIN_OFFSET, ChainCode, 0, CHAIN_CODE_LEN);
 
-            _PaymentCodeString = EncodePaymentCode(version);
-            _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
+            PaymentCodeString = EncodePaymentCode(version);
+            SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
 
         public PaymentCode(string paymentCodeString)
         {
-            _PaymentCodeString = paymentCodeString;
+            PaymentCodeString = paymentCodeString;
 
-            _PubKey = Parse().PubKey;
-            _ChainCode = Parse().ChainCode;
+            PubKey = Parse().PubKey;
+            ChainCode = Parse().ChainCode;
         }
 
         public string EncodePaymentCode(PaymentCodeVersion version)
@@ -110,16 +110,16 @@ namespace NBitcoin.BIP47
             payload[1] = (byte)0x00;
 
             // Replace sign & x code (33 bytes)
-            Array.Copy(_PubKey, 0, payload, PUBLIC_KEY_Y_OFFSET, _PubKey.Length);
+            Array.Copy(PubKey, 0, payload, PUBLIC_KEY_Y_OFFSET, PubKey.Length);
             // Replace chain code (32 bytes)
-            Array.Copy(_ChainCode, 0, payload, CHAIN_OFFSET, _ChainCode.Length);
+            Array.Copy(ChainCode, 0, payload, CHAIN_OFFSET, ChainCode.Length);
 
             // Add prefix byte for BIP47's payment codes
             paymentCode[0] = (byte)0x47;
-            _Payload = new byte[payload.Length];
+            Payload = new byte[payload.Length];
 
             Array.Copy(payload, 0, paymentCode, 1, payload.Length);
-            Array.Copy(payload, _Payload, _Payload.Length);
+            Array.Copy(payload, Payload, Payload.Length);
 
             // Append checksum
             return new Base58CheckEncoder().EncodeData(paymentCode);
@@ -127,11 +127,11 @@ namespace NBitcoin.BIP47
 
         public string EncodeSamouraiPaymentCode()
         {
-            byte[] payloadBytes = new byte[_Payload.Length];
-            Array.Copy(_Payload, payloadBytes, _Payload.Length);
+            byte[] payloadBytes = new byte[Payload.Length];
+            Array.Copy(Payload, payloadBytes, Payload.Length);
 
             // set bit0 = 1 in 'Samourai byte' for segwit. Can send/receive P2PKH, P2SH-P2WPKH, P2WPKH (bech32)
-            payloadBytes[SAMOURAI_FEATURE_BYTE] = SetBit(_Payload[SAMOURAI_FEATURE_BYTE], SAMOURAI_SEGWIT_BIT);
+            payloadBytes[SAMOURAI_FEATURE_BYTE] = SetBit(Payload[SAMOURAI_FEATURE_BYTE], SAMOURAI_SEGWIT_BIT);
 
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
 
@@ -149,7 +149,7 @@ namespace NBitcoin.BIP47
             try
             {
                 byte[] paymentCodeBytes = null;
-                string paymentCodeString = isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString;
+                string paymentCodeString = isSamouraiPaymentCode ? SamouraiPaymentCodeString : PaymentCodeString;
 
                 if (string.IsNullOrEmpty(paymentCodeString)) throw new ArgumentNullException($"Payment code '{paymentCodeString}' is empty!");
 
@@ -239,14 +239,14 @@ namespace NBitcoin.BIP47
 
         public string ToString(bool IsSamouraiPaymentCode = false)
         {
-            return IsSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString;
+            return IsSamouraiPaymentCode ? SamouraiPaymentCodeString : PaymentCodeString;
         }
 
         private BitcoinAddress AddressAt(int idx, Network network)
         {
-            ExtPubKey PubKey = new ExtPubKey(new PubKey(_PubKey), _ChainCode);
+            ExtPubKey pubKey = new ExtPubKey(new PubKey(PubKey), ChainCode);
 
-            return PubKey.Derive(0).PubKey.GetAddress(network);
+            return pubKey.Derive(0).PubKey.GetAddress(network);
         }
 
         private byte SetBit(byte b, int pos)
@@ -281,7 +281,7 @@ namespace NBitcoin.BIP47
 
         private (byte[] PubKey, byte[] ChainCode) Parse(bool isSamouraiPaymentCode = false)
         {
-            byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString);
+            byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? SamouraiPaymentCodeString : PaymentCodeString);
 
             MemoryStream mem = new MemoryStream(pcBytes);
             if (mem.ReadByte() != 0x47)

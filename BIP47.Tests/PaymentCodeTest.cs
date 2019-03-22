@@ -85,6 +85,16 @@ namespace NBitcoin.BIP47.Tests
         }
 
         [Fact]
+        public void TestRecoverFromPaymentCode()
+        {
+            PaymentCode pc = new PaymentCode(_AlicePC.ToString());
+
+            Assert.Equal(_AliceMasterKey.Derive(new KeyPath("47'/0'/0'")).Neuter().PubKey.ToBytes(), pc.PubKey);
+            Assert.Equal(_AliceMasterKey.Derive(new KeyPath("47'/0'/0'")).ChainCode, pc.ChainCode);
+            Assert.Equal("1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW", pc.NotificationAddress(Network.Main).ToString());
+        }
+
+        [Fact]
         public void TestNotificationAddress()
         {
             Assert.Equal("1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW", _AlicePC.NotificationAddress(Network.Main).ToString());
