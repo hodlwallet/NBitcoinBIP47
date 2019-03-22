@@ -34,7 +34,7 @@ namespace NBitcoin.BIP47.Tests
         }
 
         [Fact]
-        public void TestPaymentCodeSrc()
+        public void TestV1PaymentCodes()
         {
             Assert.Equal(
                 "PM8TJTLJbPRGxSbc8EJi42Wrr6QbNSaSSVJ5Y3E4pbCYiTHUskHg13935Ubb7q8tx9GVbh2UuRnBc3WSyJHhUrw8KhprKnn9eDznYGieTzFcwQRya4GA",
@@ -45,11 +45,7 @@ namespace NBitcoin.BIP47.Tests
                 "PM8TJS2JxQ5ztXUpBBRnpTbcUXbUHy2T1abfrb3KkAAtMEGNbey4oumH7Hc578WgQJhPjBxteQ5GHHToTYHE3A1w6p7tU6KSoFmWBVbFGjKPisZDbP97",
                 _BobPC.ToString()
             );
-        }
 
-        [Fact]
-        public void TestSamouraiPaymentCodeSrc()
-        {
             Assert.Equal(
                 "PM8TJTLJbPRGxSbc8EJi42Wrr6QbNSaSSVJ5Y3E4pbCYiTHUskHg13935Ubb7q8tx9GVbh2UuRnBc3WSyJHhUrw8KhprKnn9eDznYGieTzFcwQWfyARm",
                 _AlicePC.ToString(IsSamouraiPaymentCode: true)
@@ -58,6 +54,33 @@ namespace NBitcoin.BIP47.Tests
             Assert.Equal(
                 "PM8TJS2JxQ5ztXUpBBRnpTbcUXbUHy2T1abfrb3KkAAtMEGNbey4oumH7Hc578WgQJhPjBxteQ5GHHToTYHE3A1w6p7tU6KSoFmWBVbFGjKPisfUMtMJ",
                 _BobPC.ToString(IsSamouraiPaymentCode: true)
+            );
+        }
+
+        [Fact]
+        public void TestV2PaymentCodes()
+        {
+            PaymentCode alicePCV2 = new PaymentCode(_AliceMasterKey, PaymentCodeVersion.V2);
+            PaymentCode bobPCV2 = new PaymentCode(_BobMasterKey, PaymentCodeVersion.V2);
+
+            Assert.Equal(
+                "PMCbB6zHFpG2aaPB82tKmz2mXJ54dQVbZkzrsmFEFRBsy6AL5Vob3ADn1mXBUBB6maUtXug4jySLqkCyMU4rfhtWFZbwf5dTbE6mmD5gaNLDBVZdz4ZR",
+                alicePCV2.ToString()
+            );
+
+            Assert.Equal(
+                "PMCbB5gHcpvkWfGPAz1QYR7X9jFwYvwc8rJTCK4VAzADbs9DoQUyr2r23aXfTUYtDjunfQcUUwjRWzAKqi4PDzyK2ftyoPAkkFsVQRxHP7PyxxgGunwu",
+                bobPCV2.ToString()
+            );
+
+            Assert.Equal(
+                "PMCbB6zHFpG2aaPB82tKmz2mXJ54dQVbZkzrsmFEFRBsy6AL5Vob3ADn1mXBUBB6maUtXug4jySLqkCyMU4rfhtWFZbwf5dTbE6mmD5gaNLDBVeLBxZz",
+                alicePCV2.ToString(IsSamouraiPaymentCode: true)
+            );
+
+            Assert.Equal(
+                "PMCbB5gHcpvkWfGPAz1QYR7X9jFwYvwc8rJTCK4VAzADbs9DoQUyr2r23aXfTUYtDjunfQcUUwjRWzAKqi4PDzyK2ftyoPAkkFsVQRxHP7PyxxmFszfE",
+                bobPCV2.ToString(IsSamouraiPaymentCode: true)
             );
         }
 

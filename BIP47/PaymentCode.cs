@@ -57,7 +57,7 @@ namespace NBitcoin.BIP47
             _PubKey = pubKey;
             _ChainCode = chainCode;
            
-            _PaymentCodeString = version == EncodePaymentCode(version);
+            _PaymentCodeString = EncodePaymentCode(version);
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
@@ -96,7 +96,6 @@ namespace NBitcoin.BIP47
             byte[] payload = new byte[PAYLOAD_LEN];
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
 
-            // TODO: verify if this is needed
             for (int i = 0; i < PAYLOAD_LEN; i++)
             {
                 payload[i] = 0x00;
