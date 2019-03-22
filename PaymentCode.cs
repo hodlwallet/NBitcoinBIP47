@@ -43,6 +43,14 @@ namespace NBitcoin.BIP47
 
         byte[] _Payload = null;
 
+        public PaymentCode()
+        {
+            _Chain = null;
+            _Pubkey = null;
+            _PaymentCodeString = null;
+            _SamouraiPaymentCodeString = null;
+        }
+
         public PaymentCode(byte[] payload)
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
@@ -70,6 +78,14 @@ namespace NBitcoin.BIP47
 
             _PaymentCodeString = EncodePaymentCodeV2();
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
+        }
+
+        public PaymentCode(string paymentCodeString)
+        {
+            _PaymentCodeString = paymentCodeString;
+
+            _Pubkey = Parse().Pubkey;
+            _Chain = Parse().Chain;
         }
 
         public string EncodePaymentCode(PaymentCodeVersion version)
@@ -254,7 +270,7 @@ namespace NBitcoin.BIP47
             return ret;
         }
 
-        private (byte[] Pubkey, byte[] Chain) Parse(bool isSamouraiPaymentCode)
+        private (byte[] Pubkey, byte[] Chain) Parse(bool isSamouraiPaymentCode = false)
         {
             byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString);
 
