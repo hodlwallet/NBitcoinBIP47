@@ -188,17 +188,7 @@ namespace NBitcoin.BIP47
                     memoryStream.Read(pubKey);
                     memoryStream.Read(chainCode);
 
-                    MemoryStream pubkeyMemoryStream = new MemoryStream(pubKey);
-                    int firstByte = pubkeyMemoryStream.ReadByte();
-
-                    if (firstByte == 0x02 || firstByte == 0x03)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    return IsValidPubKey(pubKey);
                 }
             }
             catch (EndOfStreamException)
@@ -284,6 +274,11 @@ namespace NBitcoin.BIP47
             return ret;
         }
 
+        static private bool IsValidPubKey(byte[] pubKey)
+        {
+            return pubKey[0] == 0x02 || pubKey[0] == 0x03;
+        }
+
         private (byte[] PubKey, byte[] ChainCode, byte Version) Parse(bool isSamouraiPaymentCode = false)
         {
             byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? SamouraiPaymentCodeString : PaymentCodeString);
@@ -305,7 +300,7 @@ namespace NBitcoin.BIP47
 
             mem.Read(pubKey);
 
-            if (pubKey[0] != 0x02 && pubKey[0] != 0x03)
+            if (!IsValidPubKey(pubKey))
                 throw new FormatException("Invalid public key");
 
             mem.Read(chainCode);
