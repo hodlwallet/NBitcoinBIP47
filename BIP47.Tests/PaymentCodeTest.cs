@@ -7,8 +7,8 @@ namespace NBitcoin.BIP47.Tests
 {
     public class PaymentCodeTest
     {
-        private Mnemonic _AliceMnemonic = new Mnemonic("response seminar brave tip suit recall often sound stick owner lottery motion");
-        private Mnemonic _BobMnemonic = new Mnemonic("reward upper indicate eight swift arch injury crystal super wrestle already dentist");
+        private Mnemonic _AliceMnemonic;
+        private Mnemonic _BobMnemonic;
         private ExtKey _AliceMasterKey;
         private ExtKey _BobMasterKey;
         private PaymentCode _AlicePC;
@@ -16,8 +16,12 @@ namespace NBitcoin.BIP47.Tests
 
         public PaymentCodeTest()
         {
+            _AliceMnemonic = new Mnemonic("response seminar brave tip suit recall often sound stick owner lottery motion");
+            _BobMnemonic = new Mnemonic("reward upper indicate eight swift arch injury crystal super wrestle already dentist");
+
             _AliceMasterKey = _AliceMnemonic.DeriveExtKey();
             _BobMasterKey = _BobMnemonic.DeriveExtKey();
+
             _AlicePC = new PaymentCode(_AliceMasterKey);
             _BobPC = new PaymentCode(_BobMasterKey);
         }
