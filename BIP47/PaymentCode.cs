@@ -20,7 +20,7 @@ namespace NBitcoin.BIP47
 
         const int PUBLIC_KEY_Y_LEN = 1;
 
-        const int CHAIN_LEN = 32;
+        const int CHAIN_CODE_LEN = 32;
 
         const int PAYLOAD_LEN = 80;
 
@@ -32,67 +32,60 @@ namespace NBitcoin.BIP47
 
         string _SamouraiPaymentCodeString = null;
 
-        byte[] _Pubkey = null;
+        byte[] _PubKey = null;
 
-        byte[] _Chain = null;
+        byte[] _ChainCode = null;
 
         byte[] _Payload = null;
 
         public PaymentCode()
         {
-            _Chain = null;
-            _Pubkey = null;
+            _ChainCode = null;
+            _PubKey = null;
             _PaymentCodeString = null;
             _SamouraiPaymentCodeString = null;
         }
 
-        public PaymentCode(PubKey pubkey, byte[] chain)
+        public PaymentCode(byte[] pubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1)
         {
-            _Pubkey = pubkey.ToBytes();
-            _Chain = chain;
+            if (pubKey.Length != (PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN))
+                throw new ArgumentException($"Invalid pubkey {new HexEncoder().EncodeData(pubKey)}");
 
-            _PaymentCodeString = EncodePaymentCodeV1();
+            if (chainCode.Length != CHAIN_CODE_LEN)
+                throw new ArgumentException($"Invalid chain {new HexEncoder().EncodeData(chainCode)}");
+
+            _PubKey = pubKey;
+            _ChainCode = chainCode;
+           
+            _PaymentCodeString = version == EncodePaymentCode(version);
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
-        public PaymentCode(ExtPubKey extPubKey, byte[] chain) : this(extPubKey.PubKey, chain) { }
 
-        public PaymentCode(ExtKey masterKey) : this(masterKey.Derive(new KeyPath("47'/0'/0'")).Neuter(), masterKey.Derive(new KeyPath("47'/0'/0'")).ChainCode) { }
+        public PaymentCode(PubKey pubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(pubKey.ToBytes(), chainCode, version) { }
+        public PaymentCode(ExtPubKey extPubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(extPubKey.PubKey, chainCode, version) { }
+        public PaymentCode(ExtKey extKey, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(extKey.Derive(new KeyPath("47'/0'/0'")).Neuter(), extKey.Derive(new KeyPath("47'/0'/0'")).ChainCode, version) { }
 
-        public PaymentCode(byte[] payload)
+        public PaymentCode(byte[] payload, PaymentCodeVersion version = PaymentCodeVersion.V1)
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
 
-            _Pubkey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
-            _Chain = new byte[CHAIN_LEN];
+            _PubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
+            _ChainCode = new byte[CHAIN_CODE_LEN];
 
-            Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, _Pubkey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
-            Array.Copy(payload, CHAIN_OFFSET, _Chain, 0, CHAIN_LEN);
+            Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, _PubKey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
+            Array.Copy(payload, CHAIN_OFFSET, _ChainCode, 0, CHAIN_CODE_LEN);
 
-            _PaymentCodeString = EncodePaymentCodeV1();
+            _PaymentCodeString = EncodePaymentCode(version);
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
-        public PaymentCode(byte[] pubkey, byte[] chain)
-        {
-            if (pubkey.Length != (PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN))
-                throw new ArgumentException($"Invalid pubkey {new HexEncoder().EncodeData(pubkey)}");
-
-            if (chain.Length != CHAIN_LEN)
-                throw new ArgumentException($"Invalid chain {new HexEncoder().EncodeData(chain)}");
-
-            _Pubkey = pubkey;
-            _Chain = chain;
-
-            _PaymentCodeString = EncodePaymentCodeV1();
-            _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
-        }
 
         public PaymentCode(string paymentCodeString)
         {
             _PaymentCodeString = paymentCodeString;
 
-            _Pubkey = Parse().Pubkey;
-            _Chain = Parse().Chain;
+            _PubKey = Parse().PubKey;
+            _ChainCode = Parse().ChainCode;
         }
 
         public string EncodePaymentCode(PaymentCodeVersion version)
@@ -118,9 +111,9 @@ namespace NBitcoin.BIP47
             payload[1] = (byte)0x00;
 
             // Replace sign & x code (33 bytes)
-            Array.Copy(_Pubkey, 0, payload, PUBLIC_KEY_Y_OFFSET, _Pubkey.Length);
+            Array.Copy(_PubKey, 0, payload, PUBLIC_KEY_Y_OFFSET, _PubKey.Length);
             // Replace chain code (32 bytes)
-            Array.Copy(_Chain, 0, payload, CHAIN_OFFSET, _Chain.Length);
+            Array.Copy(_ChainCode, 0, payload, CHAIN_OFFSET, _ChainCode.Length);
 
             // Add prefix byte for BIP47's payment codes
             paymentCode[0] = (byte)0x47;
@@ -156,32 +149,32 @@ namespace NBitcoin.BIP47
         {
             try
             {
-                byte[] pcodeBytes = null;
-                string paymentCode = isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString;
+                byte[] paymentCodeBytes = null;
+                string paymentCodeString = isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString;
 
-                if (string.IsNullOrEmpty(paymentCode)) throw new ArgumentNullException($"Payment code '{paymentCode}' is empty!");
+                if (string.IsNullOrEmpty(paymentCodeString)) throw new ArgumentNullException($"Payment code '{paymentCodeString}' is empty!");
 
-                pcodeBytes = new Base58CheckEncoder().DecodeData(paymentCode);
+                paymentCodeBytes = new Base58CheckEncoder().DecodeData(paymentCodeString);
 
-                MemoryStream memoryStream = new MemoryStream(pcodeBytes);
+                MemoryStream memoryStream = new MemoryStream(paymentCodeBytes);
 
                 if (memoryStream.ReadByte() != 0x47)
                 {
-                    throw new FormatException($"Invalid version in payment code {paymentCode}");
+                    throw new FormatException($"Invalid version in payment code {paymentCodeString}");
                 }
                 else
                 {
-                    byte[] chain = new byte[CHAIN_LEN];
-                    byte[] pubkey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
+                    byte[] chainCode = new byte[CHAIN_CODE_LEN];
+                    byte[] pubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
                     // type:
                     memoryStream.ReadByte();
                     // feature:
                     memoryStream.ReadByte();
 
-                    memoryStream.Read(pubkey);
-                    memoryStream.Read(chain);
+                    memoryStream.Read(pubKey);
+                    memoryStream.Read(chainCode);
 
-                    MemoryStream pubkeyMemoryStream = new MemoryStream(pubkey);
+                    MemoryStream pubkeyMemoryStream = new MemoryStream(pubKey);
                     int firstByte = pubkeyMemoryStream.ReadByte();
 
                     if (firstByte == 0x02 || firstByte == 0x03)
@@ -221,23 +214,23 @@ namespace NBitcoin.BIP47
 
         public static byte[] Blind(byte[] payload, byte[] mask)
         {
-            byte[] ret = new byte[PAYLOAD_LEN];
-            byte[] pubkey = new byte[PUBLIC_KEY_X_LEN];
-            byte[] chain = new byte[CHAIN_LEN];
-            byte[] buf0 = new byte[PUBLIC_KEY_X_LEN];
-            byte[] buf1 = new byte[CHAIN_LEN];
+            byte[] blindData = new byte[PAYLOAD_LEN];
+            byte[] pubKey = new byte[PUBLIC_KEY_X_LEN];
+            byte[] chainCode = new byte[CHAIN_CODE_LEN];
+            byte[] pubKeyBuf = new byte[PUBLIC_KEY_X_LEN];
+            byte[] chainCodeBuf = new byte[CHAIN_CODE_LEN];
 
-            Array.Copy(payload, 0, ret, 0, PAYLOAD_LEN);
+            Array.Copy(payload, 0, blindData, 0, PAYLOAD_LEN);
 
-            Array.Copy(payload, PUBLIC_KEY_X_OFFSET, pubkey, 0, PUBLIC_KEY_X_LEN);
-            Array.Copy(payload, CHAIN_OFFSET, chain, 0, CHAIN_LEN);
-            Array.Copy(mask, 0, buf0, 0, PUBLIC_KEY_X_LEN);
-            Array.Copy(mask, PUBLIC_KEY_X_LEN, buf1, 0, CHAIN_LEN);
+            Array.Copy(payload, PUBLIC_KEY_X_OFFSET, pubKey, 0, PUBLIC_KEY_X_LEN);
+            Array.Copy(payload, CHAIN_OFFSET, chainCode, 0, CHAIN_CODE_LEN);
+            Array.Copy(mask, 0, pubKeyBuf, 0, PUBLIC_KEY_X_LEN);
+            Array.Copy(mask, PUBLIC_KEY_X_LEN, chainCodeBuf, 0, CHAIN_CODE_LEN);
 
-            Array.Copy(XOR(pubkey, buf0), 0, ret, PUBLIC_KEY_X_OFFSET, PUBLIC_KEY_X_LEN);
-            Array.Copy(XOR(chain, buf1), 0, ret, CHAIN_OFFSET, CHAIN_LEN);
+            Array.Copy(XOR(pubKey, pubKeyBuf), 0, blindData, PUBLIC_KEY_X_OFFSET, PUBLIC_KEY_X_LEN);
+            Array.Copy(XOR(chainCode, chainCodeBuf), 0, blindData, CHAIN_OFFSET, CHAIN_CODE_LEN);
 
-            return ret;
+            return blindData;
         }
 
         public BitcoinAddress NotificationAddress(Network network)
@@ -252,7 +245,7 @@ namespace NBitcoin.BIP47
 
         private BitcoinAddress AddressAt(int idx, Network network)
         {
-            ExtPubKey PubKey = new ExtPubKey(new PubKey(_Pubkey), _Chain);
+            ExtPubKey PubKey = new ExtPubKey(new PubKey(_PubKey), _ChainCode);
 
             return PubKey.Derive(0).PubKey.GetAddress(network);
         }
@@ -287,7 +280,7 @@ namespace NBitcoin.BIP47
             return ret;
         }
 
-        private (byte[] Pubkey, byte[] Chain) Parse(bool isSamouraiPaymentCode = false)
+        private (byte[] PubKey, byte[] ChainCode) Parse(bool isSamouraiPaymentCode = false)
         {
             byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString);
 
@@ -295,22 +288,22 @@ namespace NBitcoin.BIP47
             if (mem.ReadByte() != 0x47)
                 throw new FormatException("Invalid payment code version");
 
-            byte[] chain = new byte[CHAIN_LEN];
-            byte[] pubkey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
+            byte[] chainCode = new byte[CHAIN_CODE_LEN];
+            byte[] pubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
 
             // type:
             mem.ReadByte();
             // features:
             mem.ReadByte();
 
-            mem.Read(pubkey);
+            mem.Read(pubKey);
 
-            if (pubkey[0] != 0x02 && pubkey[0] != 0x03)
+            if (pubKey[0] != 0x02 && pubKey[0] != 0x03)
                 throw new FormatException("Invalid public key");
 
-            mem.Read(chain);
+            mem.Read(chainCode);
 
-            return (pubkey, chain);
+            return (pubKey, chainCode);
         }
     }
 }

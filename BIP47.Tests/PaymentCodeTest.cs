@@ -48,6 +48,20 @@ namespace NBitcoin.BIP47.Tests
         }
 
         [Fact]
+        public void TestSamouraiPaymentCodeSrc()
+        {
+            Assert.Equal(
+                "PM8TJTLJbPRGxSbc8EJi42Wrr6QbNSaSSVJ5Y3E4pbCYiTHUskHg13935Ubb7q8tx9GVbh2UuRnBc3WSyJHhUrw8KhprKnn9eDznYGieTzFcwQWfyARm",
+                _AlicePC.ToString(IsSamouraiPaymentCode: true)
+            );
+
+            Assert.Equal(
+                "PM8TJS2JxQ5ztXUpBBRnpTbcUXbUHy2T1abfrb3KkAAtMEGNbey4oumH7Hc578WgQJhPjBxteQ5GHHToTYHE3A1w6p7tU6KSoFmWBVbFGjKPisfUMtMJ",
+                _BobPC.ToString(IsSamouraiPaymentCode: true)
+            );
+        }
+
+        [Fact]
         public void TestNotificationAddress()
         {
             Assert.Equal("1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW", _AlicePC.NotificationAddress(Network.Main).ToString());
