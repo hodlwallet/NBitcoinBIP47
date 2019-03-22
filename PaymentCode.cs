@@ -61,6 +61,8 @@ namespace NBitcoin.BIP47
         }
         public PaymentCode(ExtPubKey extPubKey, byte[] chain) : this(extPubKey.PubKey, chain) { }
 
+        public PaymentCode(ExtKey masterKey) : this(masterKey.Derive(new KeyPath("47'/0'/0'")).Neuter(), masterKey.Derive(new KeyPath("47'/0'/0'")).ChainCode) { }
+
         public PaymentCode(byte[] payload)
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
