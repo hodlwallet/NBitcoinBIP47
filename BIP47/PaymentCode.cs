@@ -1,36 +1,31 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography;
 
-using NBitcoin;
 using NBitcoin.DataEncoders;
-using NBitcoin.Crypto;
-using NBitcoin.BouncyCastle.Security;
-using NBitcoin.BouncyCastle.Crypto.Parameters;
-
 
 namespace NBitcoin.BIP47
 {
-    public enum PaymentCodeVersion {V1 = 0x01, V2 = 0x02}
+    public enum PaymentCodeVersion { V1 = 0x01, V2 = 0x02 }
 
     public class PaymentCode
     {
         const int PUBLIC_KEY_Y_OFFSET = 2;
-        
+
         const int PUBLIC_KEY_X_OFFSET = 3;
-        
+
         const int CHAIN_OFFSET = 35;
-        
+
         const int PUBLIC_KEY_X_LEN = 32;
-        
+
         const int PUBLIC_KEY_Y_LEN = 1;
-        
+
         const int CHAIN_LEN = 32;
-        
+
         const int PAYLOAD_LEN = 80;
 
         const int SAMOURAI_FEATURE_BYTE = 79;
-        
+
         const int SAMOURAI_SEGWIT_BIT = 0;
 
         string _PaymentCodeString = null;
@@ -81,7 +76,7 @@ namespace NBitcoin.BIP47
         {
             if (pubkey.Length != (PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN))
                 throw new ArgumentException($"Invalid pubkey {new HexEncoder().EncodeData(pubkey)}");
-            
+
             if (chain.Length != CHAIN_LEN)
                 throw new ArgumentException($"Invalid chain {new HexEncoder().EncodeData(chain)}");
 
@@ -103,7 +98,7 @@ namespace NBitcoin.BIP47
         public string EncodePaymentCode(PaymentCodeVersion version)
         {
             if (version != PaymentCodeVersion.V1 && version != PaymentCodeVersion.V2)
-                throw new ArgumentException($"Invalid version 0x{((byte) version):X02}");
+                throw new ArgumentException($"Invalid version 0x{((byte)version):X02}");
 
             byte[] payload = new byte[PAYLOAD_LEN];
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
@@ -115,12 +110,12 @@ namespace NBitcoin.BIP47
             }
 
             // Byte 0: type
-            payload[0] = (byte) version;
+            payload[0] = (byte)version;
 
             // Byte 1: Features bit field. All bits must be zero except where specified elsewhere in this specification
             //      Bit 0: Bitmessage notification
             //      Bits 1-7: reserved
-            payload[1] = (byte) 0x00;
+            payload[1] = (byte)0x00;
 
             // Replace sign & x code (33 bytes)
             Array.Copy(_Pubkey, 0, payload, PUBLIC_KEY_Y_OFFSET, _Pubkey.Length);
@@ -128,7 +123,7 @@ namespace NBitcoin.BIP47
             Array.Copy(_Chain, 0, payload, CHAIN_OFFSET, _Chain.Length);
 
             // Add prefix byte for BIP47's payment codes
-            paymentCode[0] = (byte) 0x47;
+            paymentCode[0] = (byte)0x47;
             _Payload = new byte[payload.Length];
 
             Array.Copy(payload, 0, paymentCode, 1, payload.Length);
@@ -147,10 +142,10 @@ namespace NBitcoin.BIP47
             payloadBytes[SAMOURAI_FEATURE_BYTE] = SetBit(_Payload[SAMOURAI_FEATURE_BYTE], SAMOURAI_SEGWIT_BIT);
 
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
-            
+
             // add version byte
             paymentCode[0] = (byte)0x47;
-            
+
             Array.Copy(payloadBytes, 0, paymentCode, 1, payloadBytes.Length);
 
             // append checksum
@@ -170,7 +165,7 @@ namespace NBitcoin.BIP47
 
                 MemoryStream memoryStream = new MemoryStream(pcodeBytes);
 
-                if(memoryStream.ReadByte() != 0x47)
+                if (memoryStream.ReadByte() != 0x47)
                 {
                     throw new FormatException($"Invalid version in payment code {paymentCode}");
                 }
@@ -182,17 +177,19 @@ namespace NBitcoin.BIP47
                     memoryStream.ReadByte();
                     // feature:
                     memoryStream.ReadByte();
-                    
+
                     memoryStream.Read(pubkey);
                     memoryStream.Read(chain);
 
                     MemoryStream pubkeyMemoryStream = new MemoryStream(pubkey);
                     int firstByte = pubkeyMemoryStream.ReadByte();
 
-                    if(firstByte == 0x02 || firstByte == 0x03){
+                    if (firstByte == 0x02 || firstByte == 0x03)
+                    {
                         return true;
                     }
-                    else {
+                    else
+                    {
                         return false;
                     }
                 }
@@ -201,7 +198,7 @@ namespace NBitcoin.BIP47
             {
                 return false;
             }
-            catch(FormatException)
+            catch (FormatException)
             {
                 return false;
             }
@@ -213,11 +210,12 @@ namespace NBitcoin.BIP47
             byte[] outpoint = outPoint.ToBytes();
 
             byte[] mask = GetMask(sharedPubKey.ToBytes(), outpoint);
-            
+
             return XOR(dataToMask64bytes, mask);
         }
 
-        public static byte[] GetMask(byte[] sPoint, byte[] oPoint) {
+        public static byte[] GetMask(byte[] sPoint, byte[] oPoint)
+        {
             return new HMACSHA512(oPoint).ComputeHash(sPoint);
         }
 
@@ -261,7 +259,7 @@ namespace NBitcoin.BIP47
 
         private byte SetBit(byte b, int pos)
         {
-            return (byte) (b | (1 << pos));
+            return (byte)(b | (1 << pos));
         }
 
         private string EncodePaymentCodeV1()
@@ -281,8 +279,9 @@ namespace NBitcoin.BIP47
 
             byte[] ret = new byte[a.Length];
 
-            for(int i = 0; i < a.Length; i++)   {
-                ret[i] = (byte) ((int) b[i] ^ (int) a[i]);
+            for (int i = 0; i < a.Length; i++)
+            {
+                ret[i] = (byte)((int)b[i] ^ (int)a[i]);
             }
 
             return ret;
@@ -293,7 +292,7 @@ namespace NBitcoin.BIP47
             byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString);
 
             MemoryStream mem = new MemoryStream(pcBytes);
-            if(mem.ReadByte() != 0x47)
+            if (mem.ReadByte() != 0x47)
                 throw new FormatException("Invalid payment code version");
 
             byte[] chain = new byte[CHAIN_LEN];
@@ -305,7 +304,7 @@ namespace NBitcoin.BIP47
             mem.ReadByte();
 
             mem.Read(pubkey);
-            
+
             if (pubkey[0] != 0x02 && pubkey[0] != 0x03)
                 throw new FormatException("Invalid public key");
 
