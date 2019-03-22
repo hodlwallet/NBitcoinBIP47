@@ -28,6 +28,8 @@ namespace NBitcoin.BIP47
 
         const int SAMOURAI_SEGWIT_BIT = 0;
 
+        const byte BIP47_PREFIX = 0x47;
+
         public string PaymentCodeString { get; } = null;
 
         public string SamouraiPaymentCodeString { get; } = null;
@@ -37,6 +39,8 @@ namespace NBitcoin.BIP47
         public byte[] ChainCode { get; } = null;
 
         public byte[] Payload { get; private set; } = null;
+
+        public byte Version { get; private set; } = 0x01;
 
         public PaymentCode()
         {
@@ -56,8 +60,9 @@ namespace NBitcoin.BIP47
 
             PubKey = pubKey;
             ChainCode = chainCode;
+            Version = (byte)version;
 
-            PaymentCodeString = EncodePaymentCode(version);
+            PaymentCodeString = EncodePaymentCode();
             SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
@@ -65,17 +70,18 @@ namespace NBitcoin.BIP47
         public PaymentCode(ExtPubKey extPubKey, byte[] chainCode, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(extPubKey.PubKey, chainCode, version) { }
         public PaymentCode(ExtKey extKey, PaymentCodeVersion version = PaymentCodeVersion.V1) : this(extKey.Derive(new KeyPath("47'/0'/0'")).Neuter(), extKey.Derive(new KeyPath("47'/0'/0'")).ChainCode, version) { }
 
-        public PaymentCode(byte[] payload, PaymentCodeVersion version = PaymentCodeVersion.V1)
+        public PaymentCode(byte[] payload)
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
 
+            Version = payload[0];
             PubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
             ChainCode = new byte[CHAIN_CODE_LEN];
 
             Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, PubKey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
             Array.Copy(payload, CHAIN_OFFSET, ChainCode, 0, CHAIN_CODE_LEN);
 
-            PaymentCodeString = EncodePaymentCode(version);
+            PaymentCodeString = EncodePaymentCode();
             SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
@@ -86,12 +92,16 @@ namespace NBitcoin.BIP47
 
             PubKey = Parse().PubKey;
             ChainCode = Parse().ChainCode;
+            Version = Parse().Version;
+
+            PaymentCodeString = EncodePaymentCode();
+            SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
-        public string EncodePaymentCode(PaymentCodeVersion version)
+        public string EncodePaymentCode()
         {
-            if (version != PaymentCodeVersion.V1 && version != PaymentCodeVersion.V2)
-                throw new ArgumentException($"Invalid version 0x{((byte)version):X02}");
+            if (Version != (byte)PaymentCodeVersion.V1 && Version != (byte)PaymentCodeVersion.V2)
+                throw new ArgumentException($"Invalid version 0x{((byte)Version):X02}");
 
             byte[] payload = new byte[PAYLOAD_LEN];
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
@@ -102,7 +112,7 @@ namespace NBitcoin.BIP47
             }
 
             // Byte 0: type
-            payload[0] = (byte)version;
+            payload[0] = Version;
 
             // Byte 1: Features bit field. All bits must be zero except where specified elsewhere in this specification
             //      Bit 0: Bitmessage notification
@@ -115,7 +125,7 @@ namespace NBitcoin.BIP47
             Array.Copy(ChainCode, 0, payload, CHAIN_OFFSET, ChainCode.Length);
 
             // Add prefix byte for BIP47's payment codes
-            paymentCode[0] = (byte)0x47;
+            paymentCode[0] = BIP47_PREFIX;
             Payload = new byte[payload.Length];
 
             Array.Copy(payload, 0, paymentCode, 1, payload.Length);
@@ -135,13 +145,18 @@ namespace NBitcoin.BIP47
 
             byte[] paymentCode = new byte[PAYLOAD_LEN + 1];
 
-            // add version byte
-            paymentCode[0] = (byte)0x47;
+            // Prefix byte for bip 47 payment codes
+            paymentCode[0] = BIP47_PREFIX;
 
             Array.Copy(payloadBytes, 0, paymentCode, 1, payloadBytes.Length);
 
             // append checksum
             return new Base58CheckEncoder().EncodeData(paymentCode);
+        }
+
+        public bool IsValidSamourai()
+        {
+            return IsValid(true);
         }
 
         public bool IsValid(bool isSamouraiPaymentCode = false)
@@ -157,7 +172,7 @@ namespace NBitcoin.BIP47
 
                 MemoryStream memoryStream = new MemoryStream(paymentCodeBytes);
 
-                if (memoryStream.ReadByte() != 0x47)
+                if (memoryStream.ReadByte() != BIP47_PREFIX)
                 {
                     throw new FormatException($"Invalid version in payment code {paymentCodeString}");
                 }
@@ -254,16 +269,6 @@ namespace NBitcoin.BIP47
             return (byte)(b | (1 << pos));
         }
 
-        private string EncodePaymentCodeV1()
-        {
-            return EncodePaymentCode(PaymentCodeVersion.V1);
-        }
-
-        private string EncodePaymentCodeV2()
-        {
-            return EncodePaymentCode(PaymentCodeVersion.V2);
-        }
-
         private static byte[] XOR(byte[] a, byte[] b)
         {
             if (a.Length != b.Length)
@@ -279,19 +284,22 @@ namespace NBitcoin.BIP47
             return ret;
         }
 
-        private (byte[] PubKey, byte[] ChainCode) Parse(bool isSamouraiPaymentCode = false)
+        private (byte[] PubKey, byte[] ChainCode, byte Version) Parse(bool isSamouraiPaymentCode = false)
         {
             byte[] pcBytes = new Base58CheckEncoder().DecodeData(isSamouraiPaymentCode ? SamouraiPaymentCodeString : PaymentCodeString);
+            byte version;
 
             MemoryStream mem = new MemoryStream(pcBytes);
-            if (mem.ReadByte() != 0x47)
+            if (mem.ReadByte() != BIP47_PREFIX)
                 throw new FormatException("Invalid payment code version");
+
 
             byte[] chainCode = new byte[CHAIN_CODE_LEN];
             byte[] pubKey = new byte[PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN];
 
             // type:
-            mem.ReadByte();
+            version = (byte)mem.ReadByte();
+
             // features:
             mem.ReadByte();
 
@@ -302,7 +310,7 @@ namespace NBitcoin.BIP47
 
             mem.Read(chainCode);
 
-            return (pubKey, chainCode);
+            return (pubKey, chainCode, version);
         }
     }
 }

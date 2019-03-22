@@ -2,6 +2,7 @@ using System;
 using Xunit;
 
 using NBitcoin;
+using NBitcoin.DataEncoders;
 
 namespace NBitcoin.BIP47.Tests
 {
@@ -89,9 +90,25 @@ namespace NBitcoin.BIP47.Tests
         {
             PaymentCode pc = new PaymentCode(_AlicePC.ToString());
 
-            Assert.Equal(_AliceMasterKey.Derive(new KeyPath("47'/0'/0'")).Neuter().PubKey.ToBytes(), pc.PubKey);
-            Assert.Equal(_AliceMasterKey.Derive(new KeyPath("47'/0'/0'")).ChainCode, pc.ChainCode);
-            Assert.Equal("1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW", pc.NotificationAddress(Network.Main).ToString());
+            Assert.Equal(_AlicePC.PubKey, pc.PubKey);
+            Assert.Equal(_AlicePC.ChainCode, pc.ChainCode);
+            Assert.Equal(_AlicePC.Payload, pc.Payload);
+            Assert.Equal(_AlicePC.PaymentCodeString, pc.PaymentCodeString);
+            Assert.Equal(_AlicePC.PaymentCodeString, pc.PaymentCodeString);
+            Assert.Equal(_AlicePC.NotificationAddress(Network.Main), pc.NotificationAddress(Network.Main));
+        }
+
+        [Fact]
+        public void TestRecoverFromPayload()
+        {
+            PaymentCode pc = new PaymentCode(_AlicePC.Payload);
+
+            Assert.Equal(_AlicePC.PubKey, pc.PubKey);
+            Assert.Equal(_AlicePC.ChainCode, pc.ChainCode);
+            Assert.Equal(_AlicePC.Payload, pc.Payload);
+            Assert.Equal(_AlicePC.PaymentCodeString, pc.PaymentCodeString);
+            Assert.Equal(_AlicePC.PaymentCodeString, pc.PaymentCodeString);
+            Assert.Equal(_AlicePC.NotificationAddress(Network.Main), pc.NotificationAddress(Network.Main));
         }
 
         [Fact]
@@ -99,6 +116,18 @@ namespace NBitcoin.BIP47.Tests
         {
             Assert.Equal("1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW", _AlicePC.NotificationAddress(Network.Main).ToString());
             Assert.Equal("1ChvUUvht2hUQufHBXF8NgLhW8SwE2ecGV", _BobPC.NotificationAddress(Network.Main).ToString());
+        }
+
+        [Fact]
+        public void TestIsValid()
+        {
+            var pc = new PaymentCode("PMCbB6zHFpG2aaPB82tKmz2mXJ54dQVbZkzrsmFEFRBsy6AL5Vob3ADn1mXBUBB6maUtXug4jySLqkCyMU4rfhtWFZbwf5dTbE6mmD5gaNLDBVZdz4ZR");
+
+            Assert.True(pc.IsValid());
+
+            var pcs = new PaymentCode("PMCbB6zHFpG2aaPB82tKmz2mXJ54dQVbZkzrsmFEFRBsy6AL5Vob3ADn1mXBUBB6maUtXug4jySLqkCyMU4rfhtWFZbwf5dTbE6mmD5gaNLDBVeLBxZz");
+
+            Assert.True(pcs.IsValidSamourai());
         }
     }
 }
