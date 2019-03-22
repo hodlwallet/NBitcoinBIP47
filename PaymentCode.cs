@@ -248,7 +248,7 @@ namespace NBitcoin.BIP47
             byte[] ret = new byte[a.Length];
 
             for(int i = 0; i < a.Length; i++)   {
-                ret[i] = (byte)((int)b[i] ^ (int)a[i]);
+                ret[i] = (byte) ((int) b[i] ^ (int) a[i]);
             }
 
             return ret;
