@@ -11,30 +11,32 @@ namespace NBitcoinBIP47
     {
         static void Main(string[] args)
         {
-            Mnemonic mnemonic = new Mnemonic("response seminar brave tip suit recall often sound stick owner lottery motion");
-            ExtKey masterKey = mnemonic.DeriveExtKey();
-            byte[] seed = mnemonic.DeriveSeed();
+            Mnemonic aliceMnemonic = new Mnemonic("response seminar brave tip suit recall often sound stick owner lottery motion");
+            Mnemonic bobMnemonic = new Mnemonic("reward upper indicate eight swift arch injury crystal super wrestle already dentist");
 
-            Console.WriteLine($"Mnemonic: {mnemonic.ToString()}");
-            Console.WriteLine($"Seed: {new HexEncoder().EncodeData(seed)}");
-            Console.WriteLine($"Master key: {masterKey.ToString(Network.Main)}");
+            ExtKey aliceMasterKey = aliceMnemonic.DeriveExtKey();
+            byte[] aliceSeed = aliceMnemonic.DeriveSeed();
+            ExtKey bobMasterKey = bobMnemonic.DeriveExtKey();
+            byte[] bobSeed = bobMnemonic.DeriveSeed();
 
-            ExtKey paymentCodeKey = masterKey.Derive(new KeyPath("47'/0'/0'"));
+            ExtKey alicePaymentCodeKey = aliceMasterKey.Derive(new KeyPath("47'/0'/0'"));
+            ExtKey bobPaymentCodeKey = bobMasterKey.Derive(new KeyPath("47'/0'/0'"));
 
-            Console.WriteLine($"Derived key for the payment code is: {paymentCodeKey.ToString(Network.Main)}");
-
-            Console.WriteLine(new string('*', 80));
-
-            Console.WriteLine("\nPayment Code Demo\n");
+            Console.WriteLine($"Alice's payment code priv key: {alicePaymentCodeKey.ToString(Network.Main)}");
+            Console.WriteLine($"Bob's payment code priv key: {bobPaymentCodeKey.ToString(Network.Main)}");
 
             Console.WriteLine($"Version: {PaymentCodeVersion.V1} in bytes: 0x{((byte) PaymentCodeVersion.V1):X02}");
             Console.WriteLine($"Version: {PaymentCodeVersion.V2} in bytes: 0x{((byte) PaymentCodeVersion.V2):X02}");
 
-            ExtPubKey extPubKey = paymentCodeKey.Neuter();
-            PaymentCode pc = new PaymentCode(extPubKey, extPubKey.ChainCode);
+            ExtPubKey aliceExtPubKey = alicePaymentCodeKey.Neuter();
+            PaymentCode alicePC = new PaymentCode(aliceExtPubKey, aliceExtPubKey.ChainCode);
+            ExtPubKey bobExtPubKey = bobPaymentCodeKey.Neuter();
+            PaymentCode bobPC = new PaymentCode(bobExtPubKey, bobExtPubKey.ChainCode);
 
-            Console.WriteLine($"Payment code: {pc.ToString()}");
-            Console.WriteLine($"Notification address: {pc.NotificationAddress(Network.Main).ToString()}");
+            Console.WriteLine($"Alice's payment code: {alicePC.ToString()}");
+            Console.WriteLine($"Alice's notification address: {alicePC.NotificationAddress(Network.Main).ToString()}");
+            Console.WriteLine($"Bob's payment code: {bobPC.ToString()}");
+            Console.WriteLine($"Bob's notification address: {bobPC.NotificationAddress(Network.Main).ToString()}");
         }
     }
 }

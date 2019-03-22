@@ -56,7 +56,7 @@ namespace NBitcoin.BIP47
             _Pubkey = pubkey.ToBytes();
             _Chain = chain;
 
-            _PaymentCodeString = EncodePaymentCodeV2();
+            _PaymentCodeString = EncodePaymentCodeV1();
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
         public PaymentCode(ExtPubKey extPubKey, byte[] chain) : this(extPubKey.PubKey, chain) { }
@@ -71,7 +71,7 @@ namespace NBitcoin.BIP47
             Array.Copy(payload, PUBLIC_KEY_Y_OFFSET, _Pubkey, 0, PUBLIC_KEY_X_LEN + PUBLIC_KEY_Y_LEN);
             Array.Copy(payload, CHAIN_OFFSET, _Chain, 0, CHAIN_LEN);
 
-            _PaymentCodeString = EncodePaymentCodeV2();
+            _PaymentCodeString = EncodePaymentCodeV1();
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
@@ -86,7 +86,7 @@ namespace NBitcoin.BIP47
             _Pubkey = pubkey;
             _Chain = chain;
 
-            _PaymentCodeString = EncodePaymentCodeV2();
+            _PaymentCodeString = EncodePaymentCodeV1();
             _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
         }
 
@@ -252,9 +252,9 @@ namespace NBitcoin.BIP47
 
         private BitcoinAddress AddressAt(int idx, Network network)
         {
-            ExtPubKey extPubKey = new ExtPubKey(_Pubkey);
+            PubKey PubKey = new PubKey(_Pubkey);
 
-            return extPubKey.Derive((uint)idx).PubKey.Hash.GetAddress(network);
+            return PubKey.Hash.GetAddress(network);
         }
 
         private byte SetBit(byte b, int pos)
