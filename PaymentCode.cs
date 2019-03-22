@@ -51,6 +51,16 @@ namespace NBitcoin.BIP47
             _SamouraiPaymentCodeString = null;
         }
 
+        public PaymentCode(PubKey pubkey, byte[] chain)
+        {
+            _Pubkey = pubkey.ToBytes();
+            _Chain = chain;
+
+            _PaymentCodeString = EncodePaymentCodeV2();
+            _SamouraiPaymentCodeString = EncodeSamouraiPaymentCode();
+        }
+        public PaymentCode(ExtPubKey extPubKey, byte[] chain) : this(extPubKey.PubKey, chain) { }
+
         public PaymentCode(byte[] payload)
         {
             if (payload.Length != 80) throw new ArgumentException("Invalid payload");
@@ -90,7 +100,7 @@ namespace NBitcoin.BIP47
 
         public string EncodePaymentCode(PaymentCodeVersion version)
         {
-            if (version != PaymentCodeVersion.V1 || version != PaymentCodeVersion.V2)
+            if (version != PaymentCodeVersion.V1 && version != PaymentCodeVersion.V2)
                 throw new ArgumentException($"Invalid version 0x{((byte) version):X02}");
 
             byte[] payload = new byte[PAYLOAD_LEN];
@@ -235,10 +245,16 @@ namespace NBitcoin.BIP47
             return AddressAt(0, network);
         }
 
+        public string ToString(bool IsSamouraiPaymentCode = false)
+        {
+            return IsSamouraiPaymentCode ? _SamouraiPaymentCodeString : _PaymentCodeString;
+        }
+
         private BitcoinAddress AddressAt(int idx, Network network)
         {
-            // TODO: Figure out how to get the addrses from the payment code
-            return new Key().PubKey.Hash.GetAddress(network);
+            ExtPubKey extPubKey = new ExtPubKey(_Pubkey);
+
+            return extPubKey.Derive((uint)idx).PubKey.Hash.GetAddress(network);
         }
 
         private byte SetBit(byte b, int pos)
